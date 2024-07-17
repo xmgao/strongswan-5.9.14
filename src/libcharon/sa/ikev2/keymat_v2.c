@@ -20,6 +20,14 @@
 #include <daemon.h>
 #include <crypto/hashers/hash_algorithm_set.h>
 
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
+
+#define socket_path "/tmp/my_socket" // 定义本地套接字路径
+#define BUFFLEN 128
+
 typedef struct private_keymat_v2_t private_keymat_v2_t;
 
 /**
@@ -77,6 +85,51 @@ struct private_keymat_v2_t {
 	 */
 	hash_algorithm_set_t *hash_algorithms;
 };
+
+// 获取量子密钥
+static bool getqk(char *secretkey, size_t len)
+{
+	int ret;
+	char buf[BUFFLEN], rbuf[BUFFLEN];
+	int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sockfd < 0)
+	{
+		perror("socket creation failed");
+		return false;
+	}
+
+	struct sockaddr_un server_addr;
+	memset(&server_addr, 0, sizeof(struct sockaddr_un));
+	server_addr.sun_family = AF_UNIX;
+	strncpy(server_addr.sun_path, socket_path, sizeof(server_addr.sun_path) - 1);
+
+	int connect_status = connect(sockfd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_un));
+	if (connect_status < 0)
+	{
+		perror("connect failed");
+		return false;
+	}
+
+	// 在这里进行与服务器的交互，使用 send 和 recv 函数发送和接收数据
+	sprintf(buf, "getsharedkey %d\n", len);
+	ret = send(sockfd, buf, strlen(buf), 0);
+	if (ret < 0)
+	{
+		perror("getqk send error!\n");
+		return false;
+	}
+	ret = read(sockfd, rbuf, sizeof(rbuf));
+	if (ret < len)
+	{
+		DBG0(DBG_IKE, "quantum key unavailable");
+		close(sockfd);
+		return false;
+	}
+	memcpy(secretkey, rbuf, len); // 将得到的密钥数据copy
+	close(sockfd);
+	return true;
+}
+
 
 METHOD(keymat_t, get_version, ike_version_t,
 	private_keymat_v2_t *this)
@@ -303,7 +356,19 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	{
 		return FALSE;
 	}
-	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
+	DBG0(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
+	
+	// 获取量子密钥
+	if (!getqk(secret.ptr, secret.len))
+	{
+		DBG0(DBG_IKE, "get quantum key failed!\n");
+	}
+	else
+	{
+		DBG0(DBG_IKE, "quantum secret %B\n", &secret);
+	}
+
+
 	/* full nonce is used as seed for PRF+ ... */
 	full_nonce = chunk_cat("cc", nonce_i, nonce_r);
 	/* but the PRF may need a fixed key which only uses the first bytes of
@@ -603,6 +668,21 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		}
 		DBG4(DBG_CHD, "DH secret %B", &secret);
 	}
+		if (secret.len != 0)
+	{
+		// 获取量子密钥
+		DBG0(DBG_CHD, "shared Diffie Hellman secret %B\n", &secret);
+		// 获取量子密钥
+		if (!getqk(secret.ptr, secret.len))
+		{
+			DBG0(DBG_CHD, "get quantum key failed!\n");
+		}
+		else
+		{
+			DBG0(DBG_CHD, "quantum secret %B\n", &secret);
+		}
+	}
+
 	seed = chunk_cata("scc", secret, nonce_i, nonce_r);
 	DBG4(DBG_CHD, "seed %B", &seed);
 

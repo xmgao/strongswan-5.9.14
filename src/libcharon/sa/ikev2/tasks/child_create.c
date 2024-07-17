@@ -765,6 +765,17 @@ static status_t select_and_install(private_child_create_t *this,
 											integ_i, integ_r);
 		}
 	}
+	DBG0(DBG_IKE,
+		"SPI inbound: %.8x_i,encr_r: %B, integ_r: %B",
+		ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
+		&encr_r,&integ_r);
+
+	DBG0(DBG_IKE,
+		"SPI outbound: %.8x_r,encr_i: %B, integ_i: %B",
+		ntohl(this->child_sa->get_spi(this->child_sa, FALSE)),
+		&encr_i,&integ_i);
+
+
 	chunk_clear(&integ_i);
 	chunk_clear(&integ_r);
 	chunk_clear(&encr_i);

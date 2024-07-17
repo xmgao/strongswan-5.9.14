@@ -1,4 +1,14 @@
 /*
+ * @Author: xmgao dearlanxing@mail.ustc.edu.cn
+ * @Date: 2024-07-15 15:44:14
+ * @LastEditors: xmgao dearlanxing@mail.ustc.edu.cn
+ * @LastEditTime: 2024-07-15 17:36:47
+ * @FilePath: \cc:\Users\Administrator\Desktop\ipsec\strongswan-5.9.14\src\libipsec\esp_packet.c
+ * @Description: 
+ * 
+ * Copyright (c) 2024 by ${git_name_email}, All Rights Reserved. 
+ */
+/*
  * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
@@ -29,6 +39,10 @@
 #ifndef WIN32
 #include <netinet/in.h>
 #endif
+
+#include "qkeyconnect.h"
+SpiSocketPair *socket_pairs[MAX_DYNAMIC_SPI_COUNT]={NULL};
+int total_sockets = 0;
 
 typedef struct private_esp_packet_t private_esp_packet_t;
 
@@ -250,6 +264,24 @@ METHOD(esp_packet_t, decrypt, status_t,
 	}
 	ciphertext = reader->peek(reader);
 	reader->destroy(reader);
+	
+	size_t keysize = aead->get_key_size(aead);
+	chunk_t qk = chunk_alloc(keysize);
+	if (!getqsk(spi, seq, TRUE, &qk, keysize))
+	{
+			DBG0(DBG_ESP, "get quantum key failed!");
+			return FAILED;
+	}
+	else
+	{
+		if (!aead->set_key(aead, qk))
+		{
+			DBG0(DBG_ESP, "set quantum key failed!");
+			return FAILED;
+		}
+	}
+	chunk_clear(&qk);
+
 
 	if (!esp_context->verify_seqno(esp_context, seq))
 	{
@@ -312,6 +344,24 @@ METHOD(esp_packet_t, encrypt, status_t,
 	}
 
 	aead = esp_context->get_aead(esp_context);
+
+	size_t keysize = aead->get_key_size(aead);
+	chunk_t qk = chunk_alloc(keysize);
+	if (!getqsk(spi, next_seqno, FALSE, &qk, keysize))
+	{
+			DBG0(DBG_ESP, "get quantum key failed!");
+			return FAILED;
+	}
+	else
+	{
+		if (!aead->set_key(aead, qk))
+		{
+			DBG0(DBG_ESP, "set quantum key failed!");
+			return FAILED;
+		}
+	}
+	chunk_clear(&qk);
+
 	iv_gen = aead->get_iv_gen(aead);
 	if (!iv_gen)
 	{

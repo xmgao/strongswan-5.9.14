@@ -22,6 +22,15 @@
 #include <encoding/payloads/auth_payload.h>
 #include <sa/ikev2/keymat_v2.h>
 
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <string.h>
+
+#define socket_path "/tmp/my_socket" // 定义本地套接字路径
+#define BUFFLEN 128
+
 typedef struct private_psk_authenticator_t private_psk_authenticator_t;
 
 /**
@@ -65,6 +74,106 @@ struct private_psk_authenticator_t {
 	bool no_ppk_auth;
 };
 
+
+void replaceSecret(const char *filename, const char *newSecret)
+{
+	FILE *file = fopen(filename, "r");
+	if (file == NULL)
+	{
+		printf("Error opening file.\n");
+		return;
+	}
+
+	FILE *tempFile = fopen("temp.conf", "w");
+	if (tempFile == NULL)
+	{
+		fclose(file);
+		printf("Error creating temporary file.\n");
+		return;
+	}
+
+	char line[1000];
+	const char *searchStr = "secret =";
+	size_t searchStrLen = strlen(searchStr);
+
+	while (fgets(line, sizeof(line), file))
+	{
+		char *pos = strstr(line, searchStr);
+		if (pos != NULL)
+		{
+			fprintf(tempFile, "%.*s%s\n", (int)(pos - line) + searchStrLen, line, newSecret);
+		}
+		else
+		{
+			fprintf(tempFile, "%s", line);
+		}
+	}
+
+	fclose(file);
+	fclose(tempFile);
+
+	// Rename the temporary file to the original filename
+	remove(filename);
+	rename("temp.conf", filename);
+}
+
+void convertToHexString(const char *rbuf, char *newSecret, size_t newSize)
+{
+	int i, index = 2;
+	for (i = 0; i < newSize && rbuf[i] != '\0'; i++)
+	{
+		index += snprintf(newSecret + index, newSize - index, "%02x", (unsigned char)rbuf[i]);
+	}
+}
+
+// 更新预共享密钥
+static bool updatepsk(size_t len)
+{
+	int ret;
+	char buf[BUFFLEN], rbuf[BUFFLEN];
+	int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sockfd < 0)
+	{
+		perror("socket creation failed");
+		return false;
+	}
+
+	struct sockaddr_un server_addr;
+	memset(&server_addr, 0, sizeof(struct sockaddr_un));
+	server_addr.sun_family = AF_UNIX;
+	strncpy(server_addr.sun_path, socket_path, sizeof(server_addr.sun_path) - 1);
+
+	int connect_status = connect(sockfd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_un));
+	if (connect_status < 0)
+	{
+		perror("updatepsk connect failed");
+		return false;
+	}
+	sprintf(buf, "getsharedkey %d\n", len);
+	ret = send(sockfd, buf, strlen(buf), 0);
+	if (ret < 0)
+	{
+		perror("updatepsk send error!\n");
+		return false;
+	}
+	ret = read(sockfd, rbuf, sizeof(rbuf));
+	if (ret < len)
+	{
+		DBG0(DBG_IKE, "quantum key unavailable");
+		close(sockfd);
+		return false;
+	}
+	rbuf[ret] = '\0';
+	close(sockfd);
+	char newSecret[128] = "0x"; // Initialize with "0x" prefix
+	convertToHexString(rbuf, newSecret, sizeof(newSecret));
+	DBG0(DBG_IKE, "quantum key for update psk:%s", newSecret); // 预共享密钥
+	// TODO:找到正确的配置文件
+	const char *configFile = "/etc/swanctl/conf.d/my.conf";
+	replaceSecret(configFile, newSecret);
+	return true;
+}
+
 METHOD(authenticator_t, build, status_t,
 	private_psk_authenticator_t *this, message_t *message)
 {
@@ -93,6 +202,9 @@ METHOD(authenticator_t, build, status_t,
 		return FAILED;
 	}
 
+	chunk_t  key_value = key->get_key(key);
+	DBG0(DBG_IKE, "pre-shared key:%B", &key_value); // 共享密钥
+
 	DBG2(DBG_IKE, "successfully created shared key MAC");
 	auth_payload = auth_payload_create();
 	auth_payload->set_auth_method(auth_payload, AUTH_PSK);
@@ -113,6 +225,10 @@ METHOD(authenticator_t, build, status_t,
 		DBG2(DBG_IKE, "successfully created shared key MAC without PPK");
 		message->add_notify(message, FALSE, NO_PPK_AUTH, auth_data);
 		chunk_free(&auth_data);
+	}
+	if (!updatepsk((key->get_key(key)).len))
+	{
+		DBG0(DBG_IKE, "update psk failed!");
 	}
 	key->destroy(key);
 	return SUCCESS;
