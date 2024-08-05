@@ -2,8 +2,8 @@
  * @Author: xmgao dearlanxing@mail.ustc.edu.cn
  * @Date: 2024-07-15 15:44:14
  * @LastEditors: xmgao dearlanxing@mail.ustc.edu.cn
- * @LastEditTime: 2024-07-15 17:36:47
- * @FilePath: \cc:\Users\Administrator\Desktop\ipsec\strongswan-5.9.14\src\libipsec\esp_packet.c
+ * @LastEditTime: 2024-07-17 19:56:56
+ * @FilePath: \c\strongswan-5.9.14\src\libipsec\esp_packet.c
  * @Description: 
  * 
  * Copyright (c) 2024 by ${git_name_email}, All Rights Reserved. 
@@ -41,8 +41,6 @@
 #endif
 
 #include "qkeyconnect.h"
-SpiSocketPair *socket_pairs[MAX_DYNAMIC_SPI_COUNT]={NULL};
-int total_sockets = 0;
 
 typedef struct private_esp_packet_t private_esp_packet_t;
 

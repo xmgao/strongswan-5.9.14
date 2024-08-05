@@ -22,10 +22,7 @@
 #include <library.h>
 #include <utils/debug.h>
 
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#define socket_path "/tmp/my_socket"	//定义本地套接字路径
+#include "qkeyconnect.h"
 
 typedef struct private_ipsec_sa_t private_ipsec_sa_t;
 
@@ -117,62 +114,6 @@ struct private_ipsec_sa_t {
 	bool hard_expired;
 };
 
-
-//注册新的child SA(ipsec sa)
-static bool ipsec_sa_register(uint32_t spi,bool inbound){
-	int  ret;
-	char buf[128], rbuf[128];
-	int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sockfd < 0) {
-		perror("socket creation failed");
-		return false;
-	}
-	struct sockaddr_un server_addr;
-	memset(&server_addr, 0, sizeof(struct sockaddr_un));
-	server_addr.sun_family = AF_UNIX;
-	strncpy(server_addr.sun_path, socket_path, sizeof(server_addr.sun_path) - 1);
-
-	int connect_status = connect(sockfd, (struct sockaddr*)&server_addr, sizeof(struct sockaddr_un));
-	if (connect_status < 0) {
-		perror("connect failed");
-		return false;
-	}
-	sprintf(buf, "childsaregister %u %d\n", spi,inbound);
-	ret = send(sockfd, buf, strlen(buf), 0);
-	if (ret < 0) {
-		perror("SpiRegisterRequest send error!\n");
-		return false;
-	}
-	return true;
-}
-
-//删除child SA(ipsec sa)
-static bool ipsec_sa_destroy(uint32_t spi){
-	int  ret;
-	char buf[128];
-	int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sockfd < 0) {
-		perror("socket creation failed");
-		return false;
-	}
-	struct sockaddr_un server_addr;
-	memset(&server_addr, 0, sizeof(struct sockaddr_un));
-	server_addr.sun_family = AF_UNIX;
-	strncpy(server_addr.sun_path, socket_path, sizeof(server_addr.sun_path) - 1);
-
-	int connect_status = connect(sockfd, (struct sockaddr*)&server_addr, sizeof(struct sockaddr_un));
-	if (connect_status < 0) {
-		perror("connect failed");
-		return false;
-	}
-	sprintf(buf, "childsadestroy %u\n", spi);
-	ret = send(sockfd, buf, strlen(buf), 0);
-	if (ret < 0) {
-		perror("childsadestroyRequest send error!\n");
-		return false;
-	}
-	return true;
-}
 
 
 
