@@ -12,8 +12,10 @@
 #include <stdlib.h> // For malloc, free
 #include <pthread.h>
 
+
 #define socket_path "/tmp/my_socket" // 定义本地套接字路径
 #define MAX_DYNAMIC_SPI_COUNT 100	 // 设定最大的套接字数量
+
 
 typedef struct Queue Queue;
 
@@ -45,7 +47,6 @@ keyparameter dequeue(Queue *queue);
 
 int is_empty(const Queue *queue);
 
-
 typedef struct
 {
 	int socket_fd;
@@ -66,5 +67,7 @@ bool ipsec_sa_register(uint32_t spi, bool inbound);
 bool ipsec_sa_destroy(uint32_t spi);
 
 bool getqsk(uint32_t spi, uint32_t next_seqno, bool key_type, chunk_t *qk, size_t keysize);
+
+bool getqotpk(uint32_t spi, uint32_t next_seqno, bool key_type, chunk_t *qk, size_t keysize);
 
 #endif // QKEYCONNECT_H_

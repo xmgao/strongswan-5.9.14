@@ -136,6 +136,7 @@ ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
 ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
 ARG_ENABL_SET([bliss],          [enable BLISS software implementation plugin.])
 ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
+ARG_ENABL_SET([otpalg],         [enables the OTPALG crypto plugin.])
 ARG_ENABL_SET([botan],          [enables the Botan crypto plugin.])
 ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([chapoly],        [enables the ChaCha20/Poly1305 AEAD plugin.])
@@ -1546,6 +1547,7 @@ ADD_PLUGIN([aesni],                [s charon pki scripts medsrv attest nm cmd ai
 ADD_PLUGIN([aes],                  [s charon pki scripts nm cmd])
 ADD_PLUGIN([des],                  [s charon pki scripts nm cmd])
 ADD_PLUGIN([blowfish],             [s charon pki scripts nm cmd])
+ADD_PLUGIN([otpalg],               [s charon pki scripts nm cmd])
 ADD_PLUGIN([rc2],                  [s charon pki scripts nm cmd])
 ADD_PLUGIN([sha2],                 [s charon pki scripts medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([sha3],                 [s charon pki scripts medsrv attest nm cmd aikgen fuzz])
@@ -1712,6 +1714,7 @@ AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
 AM_CONDITIONAL(USE_DES, test x$des = xtrue)
 AM_CONDITIONAL(USE_BLOWFISH, test x$blowfish = xtrue)
+AM_CONDITIONAL(USE_OTPALG, test x$otpalg = xtrue)
 AM_CONDITIONAL(USE_RC2, test x$rc2 = xtrue)
 AM_CONDITIONAL(USE_MD4, test x$md4 = xtrue)
 AM_CONDITIONAL(USE_MD5, test x$md5 = xtrue)
@@ -1993,6 +1996,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/cmac/Makefile
 	src/libstrongswan/plugins/des/Makefile
 	src/libstrongswan/plugins/blowfish/Makefile
+	src/libstrongswan/plugins/otpalg/Makefile
 	src/libstrongswan/plugins/rc2/Makefile
 	src/libstrongswan/plugins/md4/Makefile
 	src/libstrongswan/plugins/md5/Makefile

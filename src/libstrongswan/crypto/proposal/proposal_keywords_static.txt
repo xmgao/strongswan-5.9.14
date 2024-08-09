@@ -35,6 +35,7 @@ des,              ENCRYPTION_ALGORITHM, ENCR_DES,                  0
 3des,             ENCRYPTION_ALGORITHM, ENCR_3DES,                 0
 aes,              ENCRYPTION_ALGORITHM, ENCR_AES_CBC,            128
 aes128,           ENCRYPTION_ALGORITHM, ENCR_AES_CBC,            128
+otpcbc,           ENCRYPTION_ALGORITHM, ENCR_OTP_CBC,            128
 aes192,           ENCRYPTION_ALGORITHM, ENCR_AES_CBC,            192
 aes256,           ENCRYPTION_ALGORITHM, ENCR_AES_CBC,            256
 aes128ctr,        ENCRYPTION_ALGORITHM, ENCR_AES_CTR,            128
