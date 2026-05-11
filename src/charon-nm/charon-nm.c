@@ -218,6 +218,7 @@ int main(int argc, char *argv[])
 				"charon-nm.plugins.kernel-netlink.fwmark", "!210");
 
 	DBG1(DBG_DMN, "Starting charon NetworkManager backend (strongSwan "VERSION")");
+	DBG1(DBG_DMN, "NetworkManager backend registered");
 	if (lib->integrity)
 	{
 		DBG1(DBG_DMN, "integrity tests enabled:");
@@ -228,7 +229,7 @@ int main(int argc, char *argv[])
 
 	/* register NM backend to be loaded with plugins */
 	nm_backend_register();
-
+    DBG1(DBG_DMN, "nm_backend_register works passed");
 	/* initialize daemon */
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-nm.load", PLUGINS)))
